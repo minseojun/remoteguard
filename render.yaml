@@ -1,0 +1,13 @@
+# Render 배포 설정 — Render가 이 파일을 읽고 자동으로 서버를 띄운다.
+services:
+  - type: web
+    name: remoteguard
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r server/requirements.txt"
+    startCommand: "uvicorn server.app:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: ALLOW_RAW_INGEST
+        value: "1"
+      - key: PYTHON_VERSION
+        value: "3.12.3"

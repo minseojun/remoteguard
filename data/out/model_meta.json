@@ -1,0 +1,155 @@
+{
+  "threshold": 0.007094006132768598,
+  "target_recall": 0.95,
+  "auc_loso": 0.922056055071099,
+  "fpr_at_recall": 0.3822762814943527,
+  "features": [
+    "p_force_var",
+    "p_force_uniq_ratio",
+    "p_force_degenerate",
+    "p_radius_var",
+    "p_radius_missing",
+    "p_int_snap_frac",
+    "p_nontouch_ratio",
+    "g_path_efficiency",
+    "g_curvature_mean",
+    "g_speed_peaks_per_stroke",
+    "g_jerk_norm",
+    "g_endpoint_correction",
+    "t_iei_cv",
+    "t_iei_entropy",
+    "t_iei_modal_frac",
+    "t_burst_ratio",
+    "m_sample_rate",
+    "m_sway_energy",
+    "m_tremor_energy",
+    "m_still_frac",
+    "m_accel_std",
+    "m_gyro_std",
+    "m_touch_coupling",
+    "m_coupling_z"
+  ],
+  "groups": {
+    "P": [
+      "p_force_var",
+      "p_force_uniq_ratio",
+      "p_force_degenerate",
+      "p_radius_var",
+      "p_radius_missing",
+      "p_int_snap_frac",
+      "p_nontouch_ratio"
+    ],
+    "G": [
+      "g_path_efficiency",
+      "g_curvature_mean",
+      "g_speed_peaks_per_stroke",
+      "g_jerk_norm",
+      "g_endpoint_correction"
+    ],
+    "T": [
+      "t_iei_cv",
+      "t_iei_entropy",
+      "t_iei_modal_frac",
+      "t_burst_ratio"
+    ],
+    "M": [
+      "m_sample_rate",
+      "m_sway_energy",
+      "m_tremor_energy",
+      "m_still_frac",
+      "m_accel_std",
+      "m_gyro_std",
+      "m_touch_coupling",
+      "m_coupling_z"
+    ]
+  },
+  "n_windows": 4520,
+  "n_subjects": 12,
+  "synthetic": true,
+  "ablation": {
+    "P only": {
+      "auc": 0.7846838402173513,
+      "ap": 0.8336132304714824,
+      "fpr": 0.8188531711555169,
+      "thr": 0.1530241637564396
+    },
+    "G only": {
+      "auc": 0.7398588595481719,
+      "ap": 0.8076881592309479,
+      "fpr": 0.9118158123370982,
+      "thr": 0.1608841829896648
+    },
+    "T only": {
+      "auc": 0.7235533025345898,
+      "ap": 0.796542822912093,
+      "fpr": 0.9252823631624674,
+      "thr": 0.1727443288183465
+    },
+    "M only": {
+      "auc": 0.8854620477430142,
+      "ap": 0.867771674886542,
+      "fpr": 0.46090356211989575,
+      "thr": 0.005252503079881471
+    },
+    "P+G+T (no IMU)": {
+      "auc": 0.7816001140655515,
+      "ap": 0.8316665435626394,
+      "fpr": 0.8266724587315378,
+      "thr": 0.13821626207440227
+    },
+    "ALL": {
+      "auc": 0.922056055071099,
+      "ap": 0.9232084642622528,
+      "fpr": 0.3822762814943527,
+      "thr": 0.007094006132768598
+    }
+  },
+  "importance": {
+    "m_accel_std": 10984.007679224014,
+    "m_touch_coupling": 8646.332806110382,
+    "m_sway_energy": 6163.7096170187,
+    "p_force_uniq_ratio": 5890.285309076309,
+    "p_force_var": 5210.5809046030045,
+    "m_still_frac": 4212.375684916973,
+    "m_sample_rate": 2888.805891484022,
+    "m_gyro_std": 1564.2133792340755,
+    "p_radius_var": 1345.5368161201477,
+    "m_coupling_z": 819.3649233579636,
+    "p_force_degenerate": 801.4883093833923,
+    "m_tremor_energy": 641.2343319058418,
+    "g_jerk_norm": 428.8702790439129,
+    "g_speed_peaks_per_stroke": 410.40951055288315,
+    "g_curvature_mean": 375.4963915646076,
+    "g_path_efficiency": 333.7322701513767,
+    "t_iei_entropy": 325.85141864418983,
+    "t_iei_modal_frac": 308.67473393678665,
+    "t_iei_cv": 303.9474647343159,
+    "g_endpoint_correction": 271.0470387041569,
+    "t_burst_ratio": 216.68884390592575,
+    "p_nontouch_ratio": 0.0,
+    "p_radius_missing": 0.0,
+    "p_int_snap_frac": 0.0
+  },
+  "policy": {
+    "allow_below": 0.10795858111033997,
+    "delay_above": 0.9963013090120008
+  },
+  "operating_points": {
+    "0.01": {
+      "recall": 0.47024346257889993,
+      "threshold": 0.9963013090120008
+    },
+    "0.02": {
+      "recall": 0.5022542831379622,
+      "threshold": 0.9916662726456472
+    },
+    "0.05": {
+      "recall": 0.5590622182146078,
+      "threshold": 0.9805836337438023
+    },
+    "0.1": {
+      "recall": 0.7339945897204689,
+      "threshold": 0.8797714334071628
+    }
+  }
+}

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>모의 이체 — RemoteGuard 데모</title>
+<style>
+  :root{
+    --ink:#141A21; --slate:#39485A; --dim:#7B8794; --line:#DCE1E6;
+    --bg:#F2F4F6; --card:#FFFFFF; --brand:#1D3557;
+    --ok:#0E7C7B; --warn:#A15C00; --stop:#B3261E;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0; height:100%}
+  body{background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:15px;
+    -webkit-user-select:none; user-select:none; touch-action:manipulation;
+    display:flex; flex-direction:column; overscroll-behavior:none}
+  .mock{background:#FFF3CD; border-bottom:1px solid #E5D5A0; color:#6B5200;
+    font:500 11px/1.4 var(--sans); padding:6px 12px; text-align:center; flex:0 0 auto}
+  .bar{background:var(--brand); color:#fff; padding:12px 16px; flex:0 0 auto;
+    display:flex; align-items:center; justify-content:space-between}
+  .bar b{font:600 15px/1 var(--sans); letter-spacing:-.01em}
+  .bar .rg{font:500 10px/1 var(--mono); letter-spacing:.1em; opacity:.75}
+  main{flex:1 1 auto; overflow-y:auto; padding:16px}
+  .card{background:var(--card); border:1px solid var(--line); padding:16px; margin-bottom:12px}
+  .lbl{font:500 11px/1.6 var(--mono); letter-spacing:.09em; text-transform:uppercase; color:var(--dim)}
+  h2{font:600 20px/1.3 var(--sans); margin:6px 0 16px}
+  .acct{border:1px solid var(--line); padding:13px; margin-bottom:8px}
+  .acct[aria-pressed=true]{border:2px solid var(--brand); padding:12px}
+  .acct b{display:block; font:600 15px/1.3 var(--sans)}
+  .acct span{font:400 12px/1.5 var(--mono); color:var(--dim)}
+  .amt{font:600 32px/1.2 var(--mono); text-align:right; padding:14px;
+    border-bottom:2px solid var(--brand); margin-bottom:14px}
+  .amt small{font:400 15px; color:var(--dim)}
+  .pad{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
+  .pad button{font:500 22px/1 var(--mono); padding:16px 0; background:var(--card);
+    border:1px solid var(--line); color:var(--ink)}
+  button{border-radius:0; cursor:pointer; font-family:var(--sans)}
+  .cta{width:100%; padding:16px; font:600 16px/1 var(--sans); background:var(--brand);
+    color:#fff; border:0}
+  .cta:disabled{background:#9AA6B4}
+  .ghost{width:100%; padding:14px; font:500 15px/1 var(--sans); background:var(--card);
+    color:var(--ink); border:1px solid var(--line)}
+
+  /* risk telemetry — visible in the demo, hidden in a real deployment */
+  .risk{position:sticky; bottom:0; background:var(--ink); color:#fff; padding:9px 14px;
+    font:500 11px/1.5 var(--mono); display:flex; gap:12px; align-items:center; flex:0 0 auto}
+  .risk .dot{width:9px; height:9px; border-radius:50%; background:var(--ok); flex:0 0 auto}
+  .risk .dot.warn{background:#E0A800} .risk .dot.stop{background:#E45B4C}
+  .risk .why{opacity:.75; font-size:10px; margin-left:auto; text-align:right; max-width:56%}
+
+  /* L4 challenge */
+  #chal{position:fixed; inset:0; background:var(--brand); color:#fff; z-index:99;
+    display:none; flex-direction:column; align-items:center; justify-content:center; padding:28px; text-align:center}
+  #chal.on{display:flex}
+  #chal h3{font:600 25px/1.35 var(--sans); margin:22px 0 10px; letter-spacing:-.01em}
+  #chal p{font:400 15px/1.6 var(--sans); opacity:.85; margin:0 0 26px; max-width:19em}
+  #chal .arc{position:relative; width:170px; height:170px}
+  #chal svg{transform:rotate(-90deg)}
+  #chal .ph{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font:600 13px/1.4 var(--mono); letter-spacing:.06em}
+  #chal .fail{background:rgba(0,0,0,.28); padding:11px 14px; font:400 13px/1.5 var(--sans);
+    margin-top:20px; max-width:22em}
+  #chal .skip{margin-top:24px; background:transparent; border:1px solid rgba(255,255,255,.4);
+    color:#fff; padding:11px 18px; font:500 13px/1 var(--sans)}
+  .done{text-align:center; padding:40px 16px}
+  .done .mark{font-size:44px; line-height:1}
+  .hide{display:none !important}
+</style>
+</head>
+<body>
+<div class="mock">모의 화면입니다. 실제 금융기관과 무관하며 실제 이체는 일어나지 않습니다.</div>
+<div class="bar"><b>모의은행 이체</b><span class="rg">RemoteGuard 보호중</span></div>
+
+<main id="app"></main>
+
+<div class="risk">
+  <span class="dot" id="dot"></span>
+  <span id="riskTxt">세션 분석 대기</span>
+  <span class="why" id="whyTxt"></span>
+</div>
+
+<!-- L4: physical presence -->
+<div id="chal">
+  <div class="arc">
+    <svg width="170" height="170" viewBox="0 0 170 170">
+      <circle cx="85" cy="85" r="72" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="8"/>
+      <circle id="arcFill" cx="85" cy="85" r="72" fill="none" stroke="#fff" stroke-width="8"
+              stroke-linecap="round" stroke-dasharray="452" stroke-dashoffset="452"/>
+    </svg>
+    <div class="ph" id="arcTxt">흔들어 주세요</div>
+  </div>
+  <h3>휴대폰을 손에 들고<br>가볍게 흔들어 주세요</h3>
+  <p>이체를 진행하기 전에, 지금 기기를 직접 들고 계신지 확인합니다. 2초면 됩니다.</p>
+  <div class="fail hide" id="chalFail"></div>
+  <button class="skip hide" id="chalSkip">다시 시도</button>
+</div>
+
+<script src="../shared/features.js"></script>
+<script src="../shared/challenge.js"></script>
+<script src="../sdk/remoteguard.js"></script>
+<script>
+'use strict';
+
+var API = location.origin;            // served from the same origin as the API
+var SESSION = 'demo-' + Date.now();
+var step = 0, chosen = null, amount = '', risk = 0, decision = 'allow', reasons = [];
+
+var $ = function (id) { return document.getElementById(id); };
+
+// ── SDK wiring ───────────────────────────────────────────────────
+RemoteGuard.init({
+  endpoint: API,
+  sessionId: SESSION,
+  onDecision: function (d) {
+    risk = d.risk; decision = d.decision; reasons = d.reasons || [];
+    var dot = $('dot');
+    dot.className = 'dot' + (decision === 'allow' ? '' : (decision === 'challenge' ? ' warn' : ' stop'));
+    $('riskTxt').textContent = 'risk ' + d.risk.toFixed(3) + ' · ' + decision +
+      (d.motion_available ? '' : ' · IMU 없음');
+    $('whyTxt').textContent = reasons.length ? reasons[0].text : '';
+  },
+  onError: function () {
+    // fail open, and be visible about it rather than pretending we are protecting
+    $('riskTxt').textContent = '스코어링 서버 연결 안 됨 (fail-open)';
+    $('dot').className = 'dot warn';
+  }
+});
+
+// ── flow ─────────────────────────────────────────────────────────
+var PEOPLE = [['김민수','국민 123-45-678901'],['이서연','신한 110-222-333444'],['박지훈','농협 302-1234-5678-01']];
+var STAGES = ['recipient','amount','confirm','done'];
+
+function render() {
+  RemoteGuard.setStage(STAGES[step]);
+  var m = $('app'), h = '';
+  if (step === 0) {
+    h += '<div class="card"><div class="lbl">1 / 3</div><h2>받는 분</h2>';
+    PEOPLE.forEach(function (p, i) {
+      h += '<div class="acct" data-i="' + i + '" aria-pressed="' + (chosen === i) + '"><b>' + p[0] + '</b><span>' + p[1] + '</span></div>';
+    });
+    h += '</div><button class="cta" id="next" ' + (chosen === null ? 'disabled' : '') + '>다음</button>';
+  } else if (step === 1) {
+    h += '<div class="card"><div class="lbl">2 / 3</div><h2>보낼 금액</h2>';
+    h += '<div class="amt">' + (amount ? Number(amount).toLocaleString() : '0') + ' <small>원</small></div><div class="pad">';
+    ['1','2','3','4','5','6','7','8','9','00','0','←'].forEach(function (k) {
+      h += '<button data-k="' + k + '">' + k + '</button>';
+    });
+    h += '</div></div><button class="cta" id="next" ' + (amount ? '' : 'disabled') + '>다음</button>';
+  } else if (step === 2) {
+    h += '<div class="card"><div class="lbl">3 / 3</div><h2>이체 확인</h2>';
+    h += '<div class="acct" aria-pressed="true"><b>' + PEOPLE[chosen][0] + '</b><span>' + PEOPLE[chosen][1] + '</span></div>';
+    h += '<div class="amt" style="border-bottom:0">' + Number(amount).toLocaleString() + ' <small>원</small></div></div>';
+    h += '<button class="cta" id="next">이체하기</button>';
+  } else {
+    h += '<div class="card done"><div class="mark">✓</div><h2 style="margin-top:12px">모의 이체 완료</h2>';
+    h += '<p style="color:var(--dim); font-size:13px">실제 이체는 일어나지 않았습니다.</p>';
+    h += '<button class="ghost" id="again">처음부터</button></div>';
+  }
+  m.innerHTML = h;
+
+  var nx = $('next');
+  if (nx) nx.onclick = function () { advance(); };
+  var ag = $('again');
+  if (ag) ag.onclick = function () { step = 0; chosen = null; amount = ''; render(); };
+  m.querySelectorAll('.acct[data-i]').forEach(function (el) {
+    el.onclick = function () { chosen = +el.dataset.i; render(); };
+  });
+  m.querySelectorAll('[data-k]').forEach(function (el) {
+    el.onclick = function () {
+      var k = el.dataset.k;
+      if (k === '←') amount = amount.slice(0, -1);
+      else if (amount.length < 9) amount += k;
+      render();
+    };
+  });
+}
+
+/* The gate sits on the confirm step only. Everywhere else a risky score just
+   updates the indicator: interrupting someone mid-flow for a signal that will
+   be re-measured in 1.5 s is how a security product gets switched off. */
+function advance() {
+  if (step === 2 && decision !== 'allow') { openChallenge(); return; }
+  step++;
+  render();
+}
+
+// ── L4 challenge ─────────────────────────────────────────────────
+var ARC = 452;
+function openChallenge() {
+  $('chal').classList.add('on');
+  $('chalFail').classList.add('hide');
+  $('chalSkip').classList.add('hide');
+  $('arcTxt').textContent = '흔들어 주세요';
+  $('arcFill').setAttribute('stroke-dashoffset', ARC);
+
+  RemoteGuard._cfg.onChallengeSample = function (samples) {
+    var s = RGChallenge.summarize(samples);
+    var p = Math.min(1, (s.peak_dev / RGChallenge.THRESHOLDS.minPeakDev) * 0.5 +
+                        (s.reversals / RGChallenge.THRESHOLDS.minReversals) * 0.5);
+    $('arcFill').setAttribute('stroke-dashoffset', ARC * (1 - p));
+    if (p > 0.35) $('arcTxt').textContent = '감지 중…';
+  };
+
+  RemoteGuard.runChallenge(5000).then(function (v) {
+    if (v.passed) {
+      $('arcFill').setAttribute('stroke-dashoffset', 0);
+      $('arcTxt').textContent = '확인됨';
+      setTimeout(function () {
+        $('chal').classList.remove('on');
+        step++; render();
+      }, 550);
+    } else {
+      $('arcTxt').textContent = '확인 실패';
+      var f = $('chalFail');
+      f.classList.remove('hide');
+      f.textContent = (v.failed && v.failed.length ? v.failed[0].reason : '움직임이 감지되지 않았습니다') +
+        '. 기기를 직접 손에 들고 다시 시도해 주세요.' +
+        (decision === 'challenge_and_delay'
+          ? ' 지금 통화 중이시라면, 통화를 끊고 은행 대표번호로 직접 확인하신 뒤 진행하세요.'
+          : '');
+      $('chalSkip').classList.remove('hide');
+    }
+  });
+}
+$('chalSkip').onclick = function () { openChallenge(); };
+
+// iOS needs a gesture before motion is available at all — ask on first tap
+document.addEventListener('touchstart', function once() {
+  RemoteGuard.requestMotion();
+  document.removeEventListener('touchstart', once);
+}, { once: true, passive: true });
+
+render();
+</script>
+</body>
+</html>
