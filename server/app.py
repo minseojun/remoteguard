@@ -309,6 +309,24 @@ async def ingest(req: Request):
                 warning=None if n_windows >= 3 else "session too short to be useful (<3 windows)")
 
 
+@app.get("/api/v1/export")
+def export():
+    """Bundle every raw session into one JSON so a notebook can pull the whole
+    dataset in a single request. This is the collection path, not production:
+    it returns raw traces and is meant for the consented research set only."""
+    if not ALLOW_RAW:
+        raise HTTPException(403, "raw export disabled")
+    raw_dir = ROOT / "data" / "raw"
+    sessions = []
+    if raw_dir.exists():
+        for f in sorted(raw_dir.glob("*.json")):
+            try:
+                sessions.append(json.loads(f.read_text(encoding="utf-8")))
+            except Exception:
+                continue
+    return dict(schema="remoteguard.export.v1", n=len(sessions), sessions=sessions)
+
+
 @app.get("/api/v1/stats")
 def stats():
     con = db()
@@ -331,6 +349,28 @@ def stats():
             dict(subject_id=s[0], sessions=s[1], conditions=s[2])
             for s in subj],
     )
+
+
+@app.get("/api/v1/export")
+def export():
+    """Bundle every raw session on disk into a single zip the browser downloads.
+    This is how collected data gets off the (ephemeral) free-tier server and
+    onto your computer for analysis. Download this whenever stats look right —
+    a redeploy wipes the server's disk."""
+    import io, zipfile
+    from fastapi.responses import Response
+    raw_dir = ROOT / "data" / "raw"
+    files = sorted(raw_dir.glob("*.json")) if raw_dir.exists() else []
+    if not files:
+        raise HTTPException(404, "no sessions on the server yet")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for f in files:
+            z.write(f, arcname=f"raw/{f.name}")
+    buf.seek(0)
+    stamp = time.strftime("%Y%m%d_%H%M%S")
+    return Response(buf.read(), media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="remoteguard_data_{stamp}.zip"'})
 
 
 # serve the collector, demo and shared modules from the same origin
