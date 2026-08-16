@@ -315,11 +315,22 @@ def stats():
     rows = con.execute("""SELECT condition, COUNT(*), SUM(n_windows),
                           AVG(motion_hz), AVG(clock_skew_ms)
                           FROM sessions GROUP BY condition""").fetchall()
+    subj = con.execute("""SELECT subject_id, COUNT(*),
+                          GROUP_CONCAT(DISTINCT condition)
+                          FROM sessions GROUP BY subject_id""").fetchall()
+    n_subjects = con.execute("SELECT COUNT(DISTINCT subject_id) FROM sessions").fetchone()[0]
     con.close()
-    return dict(by_condition=[
-        dict(condition=r[0], sessions=r[1], windows=r[2],
-             mean_motion_hz=round(r[3] or 0, 1), mean_clock_skew_ms=round(r[4] or 0, 2))
-        for r in rows])
+    return dict(
+        n_subjects=n_subjects,
+        ready_for_training=bool(n_subjects >= 3),
+        by_condition=[
+            dict(condition=r[0], sessions=r[1], windows=r[2],
+                 mean_motion_hz=round(r[3] or 0, 1), mean_clock_skew_ms=round(r[4] or 0, 2))
+            for r in rows],
+        by_subject=[
+            dict(subject_id=s[0], sessions=s[1], conditions=s[2])
+            for s in subj],
+    )
 
 
 # serve the collector, demo and shared modules from the same origin
